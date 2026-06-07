@@ -1,0 +1,9 @@
+{
+  "buildCommand": "npm install --prefix mcclaw-sdk && npm run build",
+  "functions": {
+    "pages/api/generate-task.js": { "maxDuration": 60 },
+    "pages/api/events.js":        { "maxDuration": 60 },
+    "pages/api/tasks.js":         { "maxDuration": 30 },
+    "pages/api/leaderboard.js":   { "maxDuration": 30 }
+  }
+}

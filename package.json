@@ -1,0 +1,23 @@
+{
+  "name": "mcask",
+  "version": "1.0.0",
+  "description": "AI-powered McClaw task generator",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@rainbow-me/rainbowkit": "^2.2.11",
+    "@tanstack/react-query": "^5.101.0",
+    "axios": "^1.6.0",
+    "next": "^14.0.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "recharts": "^3.8.1",
+    "twitter-api-v2": "^1.29.0",
+    "viem": "^2.52.2",
+    "wagmi": "^2.19.5"
+  }
+}
