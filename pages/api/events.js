@@ -1,5 +1,6 @@
 import { spawn } from 'child_process';
 import { notifyAll } from '../../lib/notify';
+import { CLI_PATH, getCliEnv } from '../../lib/cliEnv';
 
 export const config = { api: { bodyParser: false } };
 
@@ -12,22 +13,9 @@ export default function handler(req, res) {
   res.setHeader('X-Accel-Buffering', 'no');
   res.flushHeaders();
 
-  const child = spawn(
-    process.execPath,
-    [require('path').join(process.cwd(), 'mcclaw-sdk/dist/cli.mjs'), 'watch'],
-    {
-      env: {
-        ...process.env,
-        MCCLAW_PRIVATE_KEY: process.env.MCCLAW_PRIVATE_KEY,
-        MCCLAW_RPC_URL: process.env.MCCLAW_RPC_URL,
-        MCCLAW_API_URL: process.env.MCCLAW_API_URL,
-        MCCLAW_API_KEY: process.env.MCCLAW_API_KEY,
-      }
-    }
-  );
+  const child = spawn(process.execPath, [CLI_PATH, 'watch'], { env: getCliEnv(req) });
 
   const send = (data) => res.write(`data: ${JSON.stringify(data)}\n\n`);
-
   send({ type: 'connected', message: 'Listening for McClaw events...' });
 
   let buffer = '';
@@ -41,15 +29,14 @@ export default function handler(req, res) {
       try {
         const event = JSON.parse(trimmed);
         send(event);
-        // Webhook notifications for key events
         if (event.type === 'application') {
           notifyAll(
-            `📬 New application on task \`${event.taskId?.slice(0, 8)}…\`\nhttps://mcclaw.io/tasks/${event.taskId}`,
+            `New application on task \`${event.taskId?.slice(0, 8)}…\`\nhttps://mcclaw.io/tasks/${event.taskId}`,
             [['Applicant', event.applicantAddress || 'unknown'], ['Task', event.taskId || '']]
           ).catch(() => {});
         } else if (event.type === 'task_event' && event.event === 'TaskSubmitted') {
           notifyAll(
-            `✅ Work submitted on task \`${event.taskId?.slice(0, 8)}…\` — review needed!\nhttps://mcclaw.io/tasks/${event.taskId}`,
+            `Work submitted on task \`${event.taskId?.slice(0, 8)}…\` — review needed!\nhttps://mcclaw.io/tasks/${event.taskId}`,
             [['Task ID', event.taskId || ''], ['Event', event.event || '']]
           ).catch(() => {});
         }
@@ -59,11 +46,7 @@ export default function handler(req, res) {
     }
   });
 
-  child.stderr.on('data', (chunk) => {
-    send({ type: 'error', message: chunk.toString().trim() });
-  });
-
+  child.stderr.on('data', (chunk) => send({ type: 'error', message: chunk.toString().trim() }));
   child.on('close', () => send({ type: 'disconnected', message: 'Watch process ended' }));
-
   req.on('close', () => child.kill());
 }

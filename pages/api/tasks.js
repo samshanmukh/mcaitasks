@@ -1,15 +1,8 @@
 import { execFile } from 'child_process';
 import { promisify } from 'util';
+import { CLI_PATH, getCliEnv } from '../../lib/cliEnv';
 
 const execFileAsync = promisify(execFile);
-
-const CLI_ENV = {
-  ...process.env,
-  MCCLAW_PRIVATE_KEY: process.env.MCCLAW_PRIVATE_KEY,
-  MCCLAW_RPC_URL: process.env.MCCLAW_RPC_URL,
-  MCCLAW_API_URL: process.env.MCCLAW_API_URL,
-  MCCLAW_API_KEY: process.env.MCCLAW_API_KEY,
-};
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
@@ -17,8 +10,8 @@ export default async function handler(req, res) {
   try {
     const { stdout } = await execFileAsync(
       process.execPath,
-      [require('path').join(process.cwd(), 'mcclaw-sdk/dist/cli.mjs'), 'list-tasks'],
-      { env: CLI_ENV, timeout: 15000 }
+      [CLI_PATH, 'list-tasks'],
+      { env: getCliEnv(req), timeout: 15000 }
     );
     const parsed = JSON.parse(stdout);
     const tasks = parsed.tasks ?? (Array.isArray(parsed) ? parsed : [parsed]);

@@ -1,10 +1,16 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import axios from 'axios';
 import styles from '../styles/home.module.css';
 
 const TopUpWallet = dynamic(() => import('../components/TopUpWallet'), { ssr: false });
+const SettingsModal = dynamic(() => import('../components/SettingsModal'), { ssr: false });
+
+const STORAGE_KEY = 'mcask_settings';
+function loadSettings() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch { return {}; }
+}
 
 export default function CreateTask() {
   const [description, setDescription] = useState('');
@@ -13,6 +19,12 @@ export default function CreateTask() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
+  const [showSettings, setShowSettings] = useState(false);
+  const [hasKey, setHasKey] = useState(false);
+
+  useEffect(() => {
+    setHasKey(!!loadSettings().anthropicKey);
+  }, [showSettings]);
 
   const handleGenerateTask = async (e) => {
     e.preventDefault();
@@ -33,10 +45,17 @@ export default function CreateTask() {
     setLoading(true);
 
     try {
+      const { anthropicKey, mcclawApiKey, mcclawPrivKey } = loadSettings();
       const response = await axios.post('/api/generate-task', {
         description,
         agentName: agentName || 'McAsk Agent',
         escrowMclaw: parseFloat(escrow) || 1,
+      }, {
+        headers: {
+          ...(anthropicKey  && { 'x-anthropic-key':     anthropicKey  }),
+          ...(mcclawApiKey  && { 'x-mcclaw-api-key':    mcclawApiKey  }),
+          ...(mcclawPrivKey && { 'x-mcclaw-private-key': mcclawPrivKey }),
+        },
       });
 
       setResult(response.data);
@@ -70,16 +89,25 @@ export default function CreateTask() {
 
   return (
     <div className={styles.container}>
+      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
+
       <header className={styles.header}>
         <div className={styles.headerTop}>
           <div>
-            <h1>🤖 McAsk</h1>
+            <h1>McAsk</h1>
             <p>AI-Powered Task Generator for McClaw</p>
           </div>
           <TopUpWallet />
         </div>
         <div className={styles.navLinks}>
           <Link href="/" className={styles.dashboardLink}>← Home</Link>
+          <button
+            className={`${styles.dashboardLink} ${!hasKey ? styles.settingsPulse : ''}`}
+            style={{ background: 'none', border: hasKey ? '1px solid #444' : '1px solid #ffd700', cursor: 'pointer', color: hasKey ? '#888' : '#ffd700' }}
+            onClick={() => setShowSettings(true)}
+          >
+            {hasKey ? 'API Keys' : 'Set API Key'}
+          </button>
           <Link href="/feed" className={styles.dashboardLink}>📋 Feed</Link>
           <Link href="/dashboard" className={styles.dashboardLink}>Dashboard</Link>
           <Link href="/leaderboard" className={styles.dashboardLink}>🏆 Leaderboard</Link>

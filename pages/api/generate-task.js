@@ -2,6 +2,7 @@ import { execFile } from 'child_process';
 import { promisify } from 'util';
 import axios from 'axios';
 import { tweetTask, notifyAll } from '../../lib/notify';
+import { CLI_PATH, getCliEnv } from '../../lib/cliEnv';
 
 const execFileAsync = promisify(execFile);
 
@@ -11,6 +12,14 @@ export default async function handler(req, res) {
   }
 
   const { description, agentName, escrowMclaw } = req.body;
+  const anthropicKey = req.headers['x-anthropic-key'] || process.env.ANTHROPIC_API_KEY;
+
+  if (!anthropicKey) {
+    return res.status(400).json({
+      error: 'No Anthropic API key configured',
+      details: 'Set your API key in the app settings (click "Set API Key" on the create page).',
+    });
+  }
 
   if (!description || description.trim().length === 0) {
     return res.status(400).json({ error: 'Description is required' });
@@ -49,7 +58,7 @@ Make the task clear, executable, and verifiable by humans. Be specific and profe
       {
         headers: {
           'Content-Type': 'application/json',
-          'x-api-key': process.env.ANTHROPIC_API_KEY,
+          'x-api-key': anthropicKey,
           'anthropic-version': '2023-06-01'
         }
       }
@@ -97,17 +106,8 @@ Make the task clear, executable, and verifiable by humans. Be specific and profe
     const ESCROW_AMOUNT = BigInt(Math.round(escrowUnits * 1e18).toString());
     const { stdout: balanceOut } = await execFileAsync(
       process.execPath,
-      [require('path').join(process.cwd(), 'mcclaw-sdk/dist/cli.mjs'), 'balance'],
-      {
-        env: {
-          ...process.env,
-          MCCLAW_PRIVATE_KEY: process.env.MCCLAW_PRIVATE_KEY,
-          MCCLAW_RPC_URL: process.env.MCCLAW_RPC_URL,
-          MCCLAW_API_URL: process.env.MCCLAW_API_URL,
-          MCCLAW_API_KEY: process.env.MCCLAW_API_KEY,
-        },
-        timeout: 15000
-      }
+      [CLI_PATH, 'balance'],
+      { env: getCliEnv(req), timeout: 15000 }
     );
     const { balance } = JSON.parse(balanceOut);
     const balanceBigInt = BigInt(balance || '0');
@@ -127,23 +127,8 @@ Make the task clear, executable, and verifiable by humans. Be specific and profe
 
     const { stdout, stderr } = await execFileAsync(
       process.execPath,
-      [
-        require('path').join(process.cwd(), 'mcclaw-sdk/dist/cli.mjs'),
-        'create-task',
-        '--title', taskSpec.title,
-        '--description', fullDescription,
-        '--escrow-amount', ESCROW_AMOUNT.toString()
-      ],
-      {
-        env: {
-          ...process.env,
-          MCCLAW_PRIVATE_KEY: process.env.MCCLAW_PRIVATE_KEY,
-          MCCLAW_RPC_URL: process.env.MCCLAW_RPC_URL,
-          MCCLAW_API_URL: process.env.MCCLAW_API_URL,
-          MCCLAW_API_KEY: process.env.MCCLAW_API_KEY,
-        },
-        timeout: 60000
-      }
+      [CLI_PATH, 'create-task', '--title', taskSpec.title, '--description', fullDescription, '--escrow-amount', ESCROW_AMOUNT.toString()],
+      { env: getCliEnv(req), timeout: 60000 }
     );
 
     console.log('mcclaw-agent stdout:', stdout);
