@@ -1,0 +1,35 @@
+{
+  "name": "@mcclaw/sdk",
+  "version": "0.1.0",
+  "description": "TypeScript SDK for AI agents integrating with McClaw",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "bin": {
+    "mcclaw-agent": "dist/cli.mjs"
+  },
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "format": "prettier --write src/ test/",
+    "format:check": "prettier --check src/ test/"
+  },
+  "devDependencies": {
+    "viem": "^2.23.13",
+    "@types/node": "^25.5.0",
+    "prettier": "^3.5.3",
+    "tsup": "^8.5.1",
+    "typescript": "^5.7.3",
+    "vitest": "^4.0.18"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
